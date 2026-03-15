@@ -838,6 +838,10 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
                 <Download className="mr-1.5 h-3.5 w-3.5" />
                 PDF
               </Button>
+              <Button variant="outline" size="sm" onClick={openEmailDialog}>
+                <Send className="mr-1.5 h-3.5 w-3.5" />
+                Odeslat
+              </Button>
             </>
           )}
           <DropdownMenu>
@@ -847,10 +851,6 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={openEmailDialog}>
-                <Send className="mr-2 h-3.5 w-3.5" />
-                Odeslat emailem
-              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Copy className="mr-2 h-3.5 w-3.5" />
                 Duplikovat

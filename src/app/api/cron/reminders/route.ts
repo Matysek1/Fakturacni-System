@@ -26,22 +26,19 @@ export async function GET(request: Request) {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
     const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
 
-    // ── Step 1: Flip "čeká" → "po_splatnosti" for overdue invoices ──
     const flipped = await db.invoice.updateMany({
       where: {
-        statusId: 2, // čeká
+        statusId: 2,
         dueDate: { lt: now },
       },
       data: {
-        statusId: 3, // po_splatnosti
+        statusId: 3,
       },
     })
 
-    // ── Step 2: Gather all overdue invoices that need a reminder today ──
     const overdueInvoices = await db.invoice.findMany({
       where: {
-        statusId: 3, // po_splatnosti
-        // No reminder sent today yet
+        statusId: 3,
         NOT: {
           reminders: {
             some: {

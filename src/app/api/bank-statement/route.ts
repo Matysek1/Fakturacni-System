@@ -23,10 +23,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-/**
- * Send the PDF to OpenAI and extract structured transaction data.
- * Uses GPT-4o with file input to parse any Czech bank statement format.
- */
 async function extractTransactionsWithAI(
   pdfBase64: string,
   bankAccount: string | null,
@@ -91,7 +87,6 @@ ${accountInfo ? `- Ověř, zda se ve výpisu nachází číslo účtu "${account
 
   const content = response.choices[0]?.message?.content ?? ""
 
-  // Clean potential markdown code fences from the response
   const jsonStr = content
     .replace(/```json\s*/g, "")
     .replace(/```\s*/g, "")
@@ -118,7 +113,7 @@ ${accountInfo ? `- Ověř, zda se ve výpisu nachází číslo účtu "${account
           t.amount > 0
       )
       .map((t) => ({
-        vs: t.vs.replace(/^0+/, "") || t.vs,   // strip leading zeros but keep at least one char
+        vs: t.vs.replace(/^0+/, "") || t.vs,   
         amount: t.amount,
         date: t.date ?? "",
         description: t.description ?? "",
@@ -159,16 +154,13 @@ export async function POST(req: Request) {
       )
     }
 
-    // Convert PDF to base64
     const buffer = await file.arrayBuffer()
     const pdfBase64 = Buffer.from(buffer).toString("base64")
 
-    // Get company info for account verification
     const company = await db.company.findFirst({
       select: { bankAccount: true, bankCode: true },
     })
 
-    // Extract transactions using OpenAI
     const { transactions, accountVerified, accountMessage } =
       await extractTransactionsWithAI(
         pdfBase64,
@@ -197,11 +189,9 @@ export async function POST(req: Request) {
       })
     }
 
-    // Match transactions to invoices
     const results: MatchResult[] = []
 
     for (const tx of transactions) {
-      // Find invoice by VS (invoice ID)
       const invoice = await db.invoice.findUnique({
         where: { id: tx.vs },
         select: {
@@ -224,7 +214,6 @@ export async function POST(req: Request) {
         continue
       }
 
-      // Check if already paid
       if (invoice.status.name === "zaplacena") {
         results.push({
           invoiceId: invoice.id,
@@ -237,19 +226,14 @@ export async function POST(req: Request) {
         continue
       }
 
-      // Compare amounts (with small tolerance for rounding)
       const amountDiff = Math.abs(invoice.total - tx.amount)
-      const tolerance = 0.5 // 0.50 CZK tolerance
+      const tolerance = 0.5
 
       if (amountDiff <= tolerance) {
-        // Match! Mark as paid
-        // statusId 4 = zaplacena
         await db.invoice.update({
           where: { id: invoice.id },
           data: { statusId: 4 },
         })
-
-        // Create payment record
         await db.payment.create({
           data: {
             invoiceId: invoice.id,

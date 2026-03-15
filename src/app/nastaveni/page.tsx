@@ -1,7 +1,6 @@
 "use client"
 
 import { Card, CardContent } from "~/components/ui/card"
-import { Button } from "~/components/ui/button"
 import  Navbar  from "~/app/componenty/navbar"
 import { Building2, Hash, ChevronRight, User, Clipboard } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -40,7 +39,7 @@ export default function SettingsPage() {
 
         <div className="grid gap-6 sm:grid-cols-2">
           {isAdmin && (
-          <Card className="rounded-2xl hover:shadow-md transition">
+          <Card className="rounded-2xl hover:shadow-md transition cursor-pointer" onClick={() => router.push("/company")}>
             <CardContent className="p-6 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -53,15 +52,12 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-
-              <Button variant="ghost" size="icon" asChild onClick={() => router.push("/company")}>
-                  <ChevronRight className="h-5 w-5" />
-              </Button>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Card>
           )}
 
-          <Card className="rounded-2xl hover:shadow-md transition">
+          <Card className="rounded-2xl hover:shadow-md transition cursor-pointer" onClick={() => router.push("/invoice-series")}>
             <CardContent className="p-6 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -74,15 +70,12 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-
-              <Button variant="ghost" size="icon" asChild onClick={() => router.push("/invoice-series")}>
-                  <ChevronRight className="h-5 w-5" />
-              </Button>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Card>
 
           {isAdmin && (
-            <Card className="rounded-2xl hover:shadow-md transition">
+            <Card className="rounded-2xl hover:shadow-md transition cursor-pointer" onClick={() => router.push("/users")}>
             <CardContent className="p-6 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -95,15 +88,12 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-
-              <Button variant="ghost" size="icon" asChild onClick={() => router.push("/users")}>
-                  <ChevronRight className="h-5 w-5" />
-              </Button>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Card>
           )}
 
-          <Card className="rounded-2xl hover:shadow-md transition">
+          <Card className="rounded-2xl hover:shadow-md transition cursor-pointer" onClick={() => router.push("/invoice-defaults")}>
             <CardContent className="p-6 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -116,10 +106,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-
-              <Button variant="ghost" size="icon" asChild onClick={() => router.push("/invoice-defaults")}>
-                  <ChevronRight className="h-5 w-5" />
-              </Button>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>
           </Card>
            

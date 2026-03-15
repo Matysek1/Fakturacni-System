@@ -101,8 +101,10 @@ export function Invoices() {
                           <Eye className="h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="icon">
-                        <Download className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={`/faktury/${invoice.id}`}>
+                          <Download className="h-4 w-4" />
+                        </Link>
                       </Button>
                     </div>
                   </td>

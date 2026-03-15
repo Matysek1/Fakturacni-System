@@ -18,7 +18,6 @@ import {
   Legend,
 } from "recharts"
 
-/* ───── helpers ──────────────────────────────────── */
 
 /** Build array of last 12 months (label + key) */
 function getLast12Months() {

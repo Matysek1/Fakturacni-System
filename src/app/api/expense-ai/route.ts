@@ -6,10 +6,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-/**
- * Accepts a PDF or image of an expense invoice and uses GPT-4o to extract
- * structured data: supplier info, dates, items with quantities, prices, VAT, etc.
- */
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user) {

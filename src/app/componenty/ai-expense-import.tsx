@@ -182,7 +182,6 @@ export function AIExpenseImportDialog() {
           </DialogDescription>
         </DialogHeader>
 
-        {/* STEP: Upload */}
         {step === "upload" && (
           <div
             className={`
