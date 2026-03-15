@@ -2,67 +2,70 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 import { Label } from "../../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select"
-import { Switch } from "../../components/ui/switch"
-import { Checkbox } from "../../components/ui/checkbox"
 import { Card } from "../../components/ui/card"
-import { ChevronLeft, Loader2, HelpCircle } from "lucide-react"
+import { ChevronLeft, Loader2, HelpCircle, Check } from "lucide-react"
 import Link from "next/link"
-
-interface InvoiceDefaults {
-  dueDate: string
-  invoiceType: "proforma" | "faktura"
-  vatRate: string
-  unit: string
-  paymentMethod: "banka" | "kartou" | "hotove" | "dobirka" | "jina"
-  hidePaymentDetails: {
-    kartou: boolean
-    hotove: boolean
-    dobirka: boolean
-    paypal: boolean
-    jina: boolean
-  }
-  vatCalculation: "zakladu" | "konecne"
-  language: string
-  currency: string
-  fixedRate: boolean
-  customerInvoices: boolean
-}
+import { api } from "~/trpc/react"
+import { toast } from "sonner"
 
 export default function InvoiceDefaultsForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState<InvoiceDefaults>({
-    dueDate: "14",
-    invoiceType: "faktura",
-    vatRate: "21",
-    unit: "",
-    paymentMethod: "banka",
-    hidePaymentDetails: {
-      kartou: false,
-      hotove: false,
-      dobirka: false,
-      paypal: false,
-      jina: false,
-    },
-    vatCalculation: "zakladu",
-    language: "cestina",
-    currency: "czk",
-    fixedRate: false,
-    customerInvoices: false,
-  })
+  const [saved, setSaved] = useState(false)
+
+  const [dueDays, setDueDays] = useState("14")
+  const [invoiceType, setInvoiceType] = useState("faktura")
+  const [vatRate, setVatRate] = useState(21)
+  const [unit, setUnit] = useState("")
+  const [paymentMethod, setPaymentMethod] = useState("banka")
+  const [currency, setCurrency] = useState("czk")
+  const [language, setLanguage] = useState("cestina")
+  const [vatCalculation, setVatCalculation] = useState("zakladu")
+
+  const defaults = api.invoiceDefaults.get.useQuery()
+  const upsertDefaults = api.invoiceDefaults.upsert.useMutation()
+
+  useEffect(() => {
+    if (!defaults.data) return
+    const d = defaults.data
+    setDueDays(d.dueDays.toString())
+    setInvoiceType(d.invoiceType)
+    setVatRate(d.vatRate)
+    setUnit(d.unit)
+    setPaymentMethod(d.paymentMethod)
+    setCurrency(d.currency)
+    setLanguage(d.language)
+    setVatCalculation(d.vatCalculation)
+  }, [defaults.data])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setSaved(false)
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    console.log("Invoice defaults saved:", formData)
-    setIsLoading(false)
+    try {
+      await upsertDefaults.mutateAsync({
+        dueDays: Number(dueDays),
+        invoiceType,
+        vatRate,
+        unit,
+        paymentMethod,
+        currency,
+        language,
+        vatCalculation,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (error) {
+      console.error("Error saving defaults:", error)
+      toast.error("Chyba při ukládání nastavení!")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const paymentMethods = [
@@ -77,6 +80,14 @@ export default function InvoiceDefaultsForm() {
     { value: "zakladu", label: "Základu" },
     { value: "konecne", label: "Konc. částky" },
   ]
+
+  if (defaults.isLoading && !defaults.error) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -95,7 +106,7 @@ export default function InvoiceDefaultsForm() {
           <Label htmlFor="dueDate" className="text-base">
             Splatnost
           </Label>
-          <Select value={formData.dueDate} onValueChange={(value) => setFormData({ ...formData, dueDate: value })}>
+          <Select value={dueDays} onValueChange={setDueDays}>
             <SelectTrigger id="dueDate" className="w-full sm:w-[200px]">
               <SelectValue />
             </SelectTrigger>
@@ -118,8 +129,8 @@ export default function InvoiceDefaultsForm() {
               <Button
                 key={type.value}
                 type="button"
-                variant={formData.invoiceType === type.value ? "default" : "outline"}
-                onClick={() => setFormData({ ...formData, invoiceType: type.value as "proforma" | "faktura" })}
+                variant={invoiceType === type.value ? "default" : "outline"}
+                onClick={() => setInvoiceType(type.value)}
                 className="flex-1 sm:flex-none"
               >
                 {type.label}
@@ -136,8 +147,8 @@ export default function InvoiceDefaultsForm() {
             <Input
               id="vatRate"
               type="number"
-              value={formData.vatRate}
-              onChange={(e) => setFormData({ ...formData, vatRate: e.target.value })}
+              value={vatRate}
+              onChange={(e) => setVatRate(Number(e.target.value))}
               className="w-24"
               disabled={isLoading}
             />
@@ -153,8 +164,8 @@ export default function InvoiceDefaultsForm() {
             <Input
               id="unit"
               placeholder=""
-              value={formData.unit}
-              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
               className="w-full sm:w-[300px]"
               disabled={isLoading}
             />
@@ -169,49 +180,12 @@ export default function InvoiceDefaultsForm() {
               <Button
                 key={method.value}
                 type="button"
-                variant={formData.paymentMethod === method.value ? "default" : "outline"}
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    paymentMethod: method.value as InvoiceDefaults["paymentMethod"],
-                  })
-                }
+                variant={paymentMethod === method.value ? "default" : "outline"}
+                onClick={() => setPaymentMethod(method.value)}
                 className="flex-1 sm:flex-none min-w-[100px]"
               >
                 {method.label}
               </Button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-4 items-start">
-          <Label className="text-base pt-2">Schovat bank. údaje pro platbu</Label>
-          <div className="space-y-3">
-            {Object.entries({
-              kartou: "Kartou",
-              hotove: "Hotově",
-              dobirka: "Dobírka",
-              paypal: "PayPal",
-              jina: "Jiná",
-            }).map(([key, label]) => (
-              <div key={key} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`hide-${key}`}
-                  checked={formData.hidePaymentDetails[key as keyof typeof formData.hidePaymentDetails]}
-                  onCheckedChange={(checked) =>
-                    setFormData({
-                      ...formData,
-                      hidePaymentDetails: {
-                        ...formData.hidePaymentDetails,
-                        [key]: checked === true,
-                      },
-                    })
-                  }
-                />
-                <Label htmlFor={`hide-${key}`} className="text-sm font-normal cursor-pointer">
-                  {label}
-                </Label>
-              </div>
             ))}
           </div>
         </div>
@@ -223,13 +197,8 @@ export default function InvoiceDefaultsForm() {
               <Button
                 key={calc.value}
                 type="button"
-                variant={formData.vatCalculation === calc.value ? "default" : "outline"}
-                onClick={() =>
-                  setFormData({
-                    ...formData,
-                    vatCalculation: calc.value as "zakladu" | "konecne",
-                  })
-                }
+                variant={vatCalculation === calc.value ? "default" : "outline"}
+                onClick={() => setVatCalculation(calc.value)}
                 className="flex-1 sm:flex-none min-w-[120px]"
               >
                 {calc.label}
@@ -245,7 +214,7 @@ export default function InvoiceDefaultsForm() {
           <Label htmlFor="language" className="text-base">
             Jazyk faktury
           </Label>
-          <Select value={formData.language} onValueChange={(value) => setFormData({ ...formData, language: value })}>
+          <Select value={language} onValueChange={setLanguage}>
             <SelectTrigger id="language" className="w-full sm:w-[250px]">
               <SelectValue />
             </SelectTrigger>
@@ -262,7 +231,7 @@ export default function InvoiceDefaultsForm() {
             Měna
           </Label>
           <div className="space-y-2">
-            <Select value={formData.currency} onValueChange={(value) => setFormData({ ...formData, currency: value })}>
+            <Select value={currency} onValueChange={setCurrency}>
               <SelectTrigger id="currency" className="w-full sm:w-[250px]">
                 <SelectValue />
               </SelectTrigger>
@@ -275,39 +244,13 @@ export default function InvoiceDefaultsForm() {
             <p className="text-sm text-muted-foreground">Pro statistiky slouží CZK.</p>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-4 items-center">
-          <Label className="text-base">Fixní kurz</Label>
-          <div className="flex items-center gap-4">
-            <Switch
-              checked={formData.fixedRate}
-              onCheckedChange={(checked) => setFormData({ ...formData, fixedRate: checked })}
-            />
-            <Link href="#" className="text-sm text-primary hover:underline">
-              Vlastní kurzy
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-4 items-center">
-          <Label className="text-base">Faktury vystavené odběratelům</Label>
-          <div className="flex items-center gap-4">
-            <Switch
-              checked={formData.customerInvoices}
-              onCheckedChange={(checked) => setFormData({ ...formData, customerInvoices: checked })}
-            />
-            <Link href="#" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
-              Více informací...
-            </Link>
-          </div>
-        </div>
       </Card>
 
-      <div className="flex justify-center pt-4">
+      <div className="flex justify-center pt-4 pb-8">
         <Button
           type="submit"
           size="lg"
-          className="min-w-[200px] bg-[hsl(var(--chart-1))] hover:bg-[hsl(var(--chart-1))]/90"
+          className="min-w-[200px]"
           disabled={isLoading}
         >
           {isLoading ? (
@@ -315,8 +258,13 @@ export default function InvoiceDefaultsForm() {
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
               Ukládám...
             </>
+          ) : saved ? (
+            <>
+              <Check className="h-4 w-4 mr-2" />
+              Uloženo!
+            </>
           ) : (
-            "Uložit"
+            "Uložit nastavení"
           )}
         </Button>
       </div>

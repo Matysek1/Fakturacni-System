@@ -3,6 +3,7 @@ import { type DefaultSession, type NextAuthConfig } from "next-auth";
 import EmailProvider from "next-auth/providers/email";
 
 import { db } from "~/server/db";
+import { sendVerificationRequest } from "./send-verification-request";
 
 /**
  * 🔹 Module augmentation
@@ -37,6 +38,7 @@ export const authConfig = {
         },
       },
       from: process.env.EMAIL_FROM,
+      sendVerificationRequest,
     }),
   ],
 

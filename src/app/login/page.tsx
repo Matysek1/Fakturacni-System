@@ -9,6 +9,7 @@ import { Input } from "../../components/ui/input"
 import { Label } from "../../components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import { Mail, Loader2 } from "lucide-react"
+import { api } from "~/trpc/react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -17,29 +18,42 @@ export default function LoginPage() {
   const [isOk, setIsOk] = useState(true)
   const [errorMessage, setErrorMessage] = useState("")
 
+  const utils = api.useUtils()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setErrorMessage("")
 
-      try {
-    const result = await signIn("email", {
-      email,
-      redirect: false,
-      callbackUrl: "/",
-    });
+    try {
+      // 1. Zkontrolujeme, zda uživatel existuje
+      const { exists } = await utils.user.checkExists.fetch({ email })
 
-    if (result?.error) {
-      setErrorMessage("Tento e-mail není povolen pro přihlášení.");
-      setIsOk(false);
-      return;
-    }
+      if (!exists) {
+        setErrorMessage("Uživatel s tímto e-mailem nebyl nalezen. Zkontrolujte prosím správnost zadání.")
+        setIsLoading(false)
+        return
+      }
 
-    setIsSubmitted(true);
+      // 2. Pokud existuje, zkusíme přihlášení
+      const result = await signIn("email", {
+        email,
+        redirect: false,
+        callbackUrl: "/",
+      });
+
+      if (result?.error) {
+        console.error("SignIn error:", result.error)
+        setErrorMessage("Nastala chyba při odesílání přihlašovacího odkazu. Zkuste to prosím později.");
+        setIsOk(false);
+        return;
+      }
+
+      setIsSubmitted(true);
     } catch (error) {
       console.error("Error signing in:", error);
       setErrorMessage(error instanceof Error ? error.message : "Neznámá chyba");
-      setIsOk(false);
+      // Pokud to selže na checkExists (např. síť), taky zobrazíme chybu
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +131,13 @@ export default function LoginPage() {
               className="h-11 bg-background border-border"
             />
           </div>
+
+          {errorMessage && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm">
+              {errorMessage}
+            </div>
+          )}
+
           <Button type="submit" className="w-full h-11 text-base font-medium" disabled={isLoading}>
             {isLoading ? (
               <>

@@ -14,7 +14,7 @@ import type { Session } from "next-auth";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-import { PrismaClient } from "@prisma/client";
+import { type PrismaClient } from "@prisma/client";
 export type TRPCContext = {
   db: PrismaClient;
   session: Session | null;
@@ -137,3 +137,31 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+/**
+ * Admin-only procedure (role = 1)
+ * Use for: company settings, user management
+ */
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== 1) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Nemáte oprávnění. Přístup pouze pro administrátory.",
+    });
+  }
+  return next();
+});
+
+/**
+ * Admin + Účetní procedure (role = 1 or 2)
+ * Use for: invoice numbering, invoice defaults, expense/credit-note numbering
+ */
+export const accountantProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== 1 && ctx.session.user.role !== 2) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Nemáte oprávnění. Přístup pouze pro administrátory a účetní.",
+    });
+  }
+  return next();
+});

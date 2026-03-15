@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Company {
-  id          Int        @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   name        String
   ico         String?
   dic         String?
@@ -17,81 +17,114 @@ model Company {
   psc         String?
   bankAccount String?
   bankCode    String?
-  isPayer     Boolean    @default(true)
+  iban        String?
+  isPayer     Boolean  @default(true)
 
-  customers   Customer[]
+  customers Customer[]
 
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("company")
 }
 
 model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String?   @unique
-  emailVerified  DateTime?
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
 
-  roleId         Int       @default(3)
-  role           Role      @relation(fields: [roleId], references: [id])
+  roleId Int  @default(3)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  invoices       Invoice[]
+  invoices    Invoice[]
+  expenses    Expense[]
+  creditNotes CreditNote[]
+  templates   InvoiceTemplate[]
 
-  accounts       Account[]
-  sessions       Session[]
+  accounts Account[]
+  sessions Session[]
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user")
 }
 
 model Role {
-  id     Int     @id @default(autoincrement())
-  name   String  @unique
-  users  User[]
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+
+  @@map("role")
 }
 
 model Customer {
-  id        Int       @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   companyId Int
-  company   Company   @relation(fields: [companyId], references: [id])
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
 
-  name      String
-  ico       String?
-  dic       String?
-  address   String?
-  contact   String?
+  name    String
+  ico     String?
+  dic     String?
+  address String?
+  mesto   String?
+  psc     String?
+  contact String?
 
-  invoices  Invoice[]
+  invoices    Invoice[]
+  expenses    Expense[]
+  creditNotes CreditNote[]
+  templates   InvoiceTemplate[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("customer")
+}
+
+model InvoiceStatus {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  label    String
+  invoices Invoice[]
+  expenses Expense[]
+
+  @@map("invoicestatus")
 }
 
 model Invoice {
-  id          String             @id 
-  customerId  Int
-  customer    Customer        @relation(fields: [customerId], references: [id])
+  id         String   @id
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
-  userId      String
-  user        User            @relation(fields: [userId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Restrict)
 
-  issueDate   DateTime
-  dueDate     DateTime
-  duzpDate    DateTime
-  total       Float
-  status      String
+  statusId Int           @default(1)
+  status   InvoiceStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+
+  issueDate DateTime
+  dueDate   DateTime
+  duzpDate  DateTime
+  total     Float
+  discount  Float?    @default(0)
 
   items       InvoiceItem[]
   payments    Payment[]
   reminders   Reminder[]
+  creditNotes CreditNote[]
 
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("invoice")
 }
 
 model InvoiceItem {
-  id         Int      @id @default(autoincrement())
-  invoiceId   String
-  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  id        Int     @id @default(autoincrement())
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
   description String
   qty         Int
@@ -99,14 +132,16 @@ model InvoiceItem {
   price       Float
   vat         Float?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("invoiceitem")
 }
 
 model Payment {
-  id        Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
   date      DateTime
   amount    Float
@@ -115,12 +150,14 @@ model Payment {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("payment")
 }
 
 model Reminder {
-  id       Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   invoiceId String
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id])
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
   date      DateTime
   message   String?
@@ -128,17 +165,17 @@ model Reminder {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("reminder")
 }
 
 model Account {
   id                String  @id @default(cuid())
   userId            String
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   type              String
   provider          String
   providerAccountId String
-
   refresh_token     String? @db.Text
   access_token      String? @db.Text
   expires_at        Int?
@@ -148,6 +185,7 @@ model Account {
   session_state     String?
 
   @@unique([provider, providerAccountId])
+  @@map("account")
 }
 
 model Session {
@@ -156,6 +194,8 @@ model Session {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expires      DateTime
+
+  @@map("session")
 }
 
 model VerificationToken {
@@ -164,17 +204,149 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@map("verificationtoken")
 }
 
 model InvoiceNumbering {
-  id               Int   @id @default(autoincrement())
-
-  yearFormat       String   // YYYY | YY | NONE
+  id               Int     @id @default(autoincrement())
+  yearFormat       String
   includeMonth     Boolean
-  sequencePosition String   // START | END
+  sequencePosition String
   digits           Int
-  prefix           String?  @default("")
+  prefix           String? @default("")
+  currentNumber    Int
 
-  currentNumber    Int      // aktuální pořadové číslo
+  @@map("invoicenumbering")
 }
 
+model InvoiceDefaults {
+  id             Int    @id @default(autoincrement())
+  dueDays        Int    @default(14)
+  invoiceType    String @default("faktura")
+  vatRate        Int    @default(21)
+  unit           String @default("")
+  paymentMethod  String @default("banka")
+  currency       String @default("czk")
+  language       String @default("cestina")
+  vatCalculation String @default("zakladu")
+
+  @@map("invoicedefaults")
+}
+
+model Expense {
+  id          String    @id
+  customerId  Int?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  statusId    Int       @default(1)
+  status      InvoiceStatus @relation(fields: [statusId], references: [id], onDelete: Restrict)
+  issueDate   DateTime
+  dueDate     DateTime
+  total       Float
+  description String?
+  items       ExpenseItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("expense")
+}
+
+model ExpenseItem {
+  id          Int     @id @default(autoincrement())
+  expenseId   String
+  expense     Expense @relation(fields: [expenseId], references: [id], onDelete: Restrict)
+  description String
+  qty         Int
+  unit        String?
+  price       Float
+  vat         Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("expenseitem")
+}
+
+model ExpenseNumbering {
+  id            Int    @id @default(autoincrement())
+  prefix        String @default("N")
+  currentNumber Int    @default(0)
+
+  @@map("expensenumbering")
+}
+
+model CreditNote {
+  id         String   @id
+  invoiceId  String
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  customerId Int
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  issueDate  DateTime
+  duzpDate   DateTime
+  total      Float
+  reason     String?
+  items      CreditNoteItem[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("creditnote")
+}
+
+model CreditNoteItem {
+  id           Int        @id @default(autoincrement())
+  creditNoteId String
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Restrict)
+  description  String
+  qty          Int
+  unit         String?
+  price        Float
+  vat          Float?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("creditnoteitem")
+}
+
+model CreditNoteNumbering {
+  id            Int    @id @default(autoincrement())
+  prefix        String @default("D")
+  currentNumber Int    @default(0)
+
+  @@map("creditnotenumbering")
+}
+
+model InvoiceTemplate {
+  id            Int      @id @default(autoincrement())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  name          String
+  customerId    Int?
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  paymentMethod String   @default("banka")
+  currency      String   @default("czk")
+  daysToDue     Int      @default(14)
+  discount      Float?   @default(0)
+  invoiceType   String   @default("faktura")
+  items         InvoiceTemplateItem[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("invoicetemplate")
+}
+
+model InvoiceTemplateItem {
+  id          Int             @id @default(autoincrement())
+  templateId  Int
+  template    InvoiceTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  description String
+  qty         Int
+  unit        String?
+  price       Float
+  vat         Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("invoicetemplateitem")
+}

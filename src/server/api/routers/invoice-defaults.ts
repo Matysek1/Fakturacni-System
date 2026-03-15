@@ -2,47 +2,41 @@ import { z } from "zod";
 
 import {
   createTRPCRouter,
-  publicProcedure,
+  accountantProcedure,
 } from "~/server/api/trpc";
 
 export const invoiceDefaultsRouter = createTRPCRouter({
+  get: accountantProcedure.query(async ({ ctx }) => {
+    // Get the first (and only) defaults row, or return null
+    const defaults = await ctx.db.invoiceDefaults.findFirst()
+    return defaults
+  }),
 
-    get : publicProcedure
-    .query(async ({ ctx }) => {
-      return ctx.db.invoiceNumbering.findFirst({
-        select: {
-            id: true,
-            yearFormat: true,
-            includeMonth: true,
-            sequencePosition: true,
-            digits: true,
-            prefix: true,
-            currentNumber: true,
-        },
-      });
-    }),
-
-    edit : publicProcedure
-    .input(z.object({ id: z.number().min(1),
-        yearFormat: z.string().min(1),
-        includeMonth: z.boolean(),
-        sequencePosition: z.string().min(1),
-        digits: z.number().min(1),
-        prefix: z.string().min(1),
-        currentNumber: z.number().min(0)}))
+  upsert: accountantProcedure
+    .input(
+      z.object({
+        dueDays: z.number().int().min(1),
+        invoiceType: z.string(),
+        vatRate: z.number().int().min(0),
+        unit: z.string(),
+        paymentMethod: z.string(),
+        currency: z.string(),
+        language: z.string(),
+        vatCalculation: z.string(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
-        return ctx.db.invoiceNumbering.update({
-        where: {
-            id: input.id,
-        },
-        data: {
-            yearFormat: input.yearFormat,
-            includeMonth: input.includeMonth,
-            sequencePosition: input.sequencePosition,
-            digits: input.digits,
-            prefix: input.prefix,
-            currentNumber: input.currentNumber,
-        },
-      });
+      const existing = await ctx.db.invoiceDefaults.findFirst()
+
+      if (existing) {
+        return ctx.db.invoiceDefaults.update({
+          where: { id: existing.id },
+          data: input,
+        })
+      } else {
+        return ctx.db.invoiceDefaults.create({
+          data: input,
+        })
+      }
     }),
 });

@@ -61,7 +61,7 @@ export function UsersTable({ users, onEdit, onDelete }: UsersTableProps) {
                     <Badge className={roleColors[user.role]}>{roleLabels[user.role]}</Badge>
                   </td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">
-                    {new Date(user.createdAt!).toLocaleDateString("cs-CZ")}
+                    {user.createdAt ? new Date(user.createdAt).toLocaleDateString("cs-CZ") : "—"}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <DropdownMenu>

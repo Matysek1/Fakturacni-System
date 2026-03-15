@@ -9,6 +9,7 @@ import { Button } from  "../../components/ui/button"
 import { Plus } from "lucide-react"
 import { api } from "~/trpc/react";
 import { useSession } from "next-auth/react"
+import { toast } from "sonner"
 
 
 
@@ -29,8 +30,14 @@ export default function UsersPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [users, setUsers] = useState<User[]>([])
         const fetchUsers = api.user.get.useQuery();
-        const deleteUser = api.user.delete.useMutation();
-        const editUser = api.user.edit.useMutation();
+        const deleteUser = api.user.delete.useMutation({
+          onSuccess: () => { toast.success("Uživatel byl úspěšně smazán.") },
+          onError: () => { toast.error("Chyba při mazání uživatele.") },
+        });
+        const editUser = api.user.edit.useMutation({
+          onSuccess: () => { toast.success("Uživatel byl úspěšně upraven.") },
+          onError: () => { toast.error("Chyba při úpravě uživatele.") },
+        });
         const { data: session } = useSession();
 
   const handleAddUser = (newUser: Omit<User, "id" | "createdAt">) => {
@@ -94,7 +101,7 @@ export default function UsersPage() {
         getUsers();
     }, [fetchUsers.data]);
     console.log("session?.user.role ", session?.user.role);
-    if (session?.user.role.toString() !== "1") {
+    if (session?.user.role !== 1) {
     return <div className="min-h-screen flex items-center justify-center">
       <p className="text-xl font-semibold">Nemáte oprávnění k přístupu na tuto stránku.</p>
     </div>;

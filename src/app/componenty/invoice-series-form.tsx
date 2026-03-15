@@ -8,14 +8,26 @@ import { Input } from "../../components/ui/input"
 import { Label } from "../../components/ui/label"
 import { cn } from "../../lib/utils"
 import { api } from "~/trpc/react"
-import { date } from "zod"
+import { toast } from "sonner"
+
+// Map between UI annualCount values and the number of digits stored in DB
+// annualCount 100 → 3 digits, 1000 → 4 digits, etc.
+function annualCountToDigits(count: number): number {
+  return count.toString().length
+}
+
+function digitsToAnnualCount(digits: number): number {
+  // 3 digits → 100, 4 → 1000, 5 → 10000, etc.
+  return Math.pow(10, digits - 1)
+}
+
+type AnnualCount = 100 | 1000 | 10000 | 100000 | 1000000
 
 export function InvoiceSeriesForm() {
-  const [yearFormat, setYearFormat] = useState<"yyyy" | "yy" | "none">("yy")
+  const [yearFormat, setYearFormat] = useState<"YYYY" | "YY" | "NONE">("YY")
   const [monthNumber, setMonthNumber] = useState<"yes" | "no">("no")
-  const [sequentialPosition, setSequentialPosition] = useState<"start" | "end">("end")
-  const [annualCount, setAnnualCount] =
-    useState<100 | 1000 | 10000 | 100000 | 1000000>(1000)
+  const [sequentialPosition, setSequentialPosition] = useState<"START" | "END">("END")
+  const [annualCount, setAnnualCount] = useState<AnnualCount>(1000)
   const [prefix, setPrefix] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -27,66 +39,53 @@ export function InvoiceSeriesForm() {
 
     const d = invoiceDefaults.data
 
-    setYearFormat(
-      d.yearFormat === new Date().getFullYear().toString()
-        ? "yyyy"
-        : d.yearFormat === new Date().getFullYear().toString().slice(-2)
-        ? "yy"
-        : "none"
-    )
+    // yearFormat is stored as "YYYY", "YY", or "NONE" in DB
+    const yf = d.yearFormat.toUpperCase()
+    if (yf === "YYYY") setYearFormat("YYYY")
+    else if (yf === "YY") setYearFormat("YY")
+    else setYearFormat("NONE")
 
     setMonthNumber(d.includeMonth ? "yes" : "no")
 
     setSequentialPosition(
-      d.sequencePosition === "START" ? "start" : "end"
+      d.sequencePosition.toUpperCase() === "START" ? "START" : "END"
     )
 
-    setAnnualCount(digitsToAnnualCount(d.digits) as typeof annualCount)
-
+    // Convert DB digits back to annualCount for the UI
+    const count = digitsToAnnualCount(d.digits) as AnnualCount
+    // Clamp to valid values
+    const validCounts: AnnualCount[] = [100, 1000, 10000, 100000, 1000000]
+    setAnnualCount(validCounts.includes(count) ? count : 1000)
 
     setPrefix(d.prefix ?? "")
   }, [invoiceDefaults.data])
 
   const generatePreview = () => {
-    let preview = "Faktura "
     const parts: string[] = []
 
     if (prefix) parts.push(prefix)
 
-    if (yearFormat !== "none") {
-      if (yearFormat === "yyyy") {
-        const fullYear = new Date().getFullYear().toString()
-        parts.push(fullYear)
-      } else if (yearFormat === "yy") {
-        const shortYear = new Date().getFullYear().toString().slice(-2)
-        parts.push(shortYear)
-      }
+    if (sequentialPosition === "START") {
+      const digits = annualCountToDigits(annualCount)
+      parts.push("1".padStart(digits, "0"))
+    }
+
+    if (yearFormat === "YYYY") {
+      parts.push(new Date().getFullYear().toString())
+    } else if (yearFormat === "YY") {
+      parts.push(new Date().getFullYear().toString().slice(-2))
     }
 
     if (monthNumber === "yes") {
-      parts.push("01")
+      parts.push((new Date().getMonth() + 1).toString().padStart(2, "0"))
     }
 
-    const digits = annualCount.toString().length
-    const sequentialNumber = "1".padStart(digits, "0")
-
-    if (sequentialPosition === "start") {
-      parts.unshift(sequentialNumber)
-    } else {
-      parts.push(sequentialNumber)
+    if (sequentialPosition === "END") {
+      const digits = annualCountToDigits(annualCount)
+      parts.push("1".padStart(digits, "0"))
     }
 
-    preview += parts.join("")
-
-    return preview
-  }
-
-  function toDigits(value: number): number {
-  return value.toString().length
-  }
-
-  function digitsToAnnualCount(digits: number): number {
-  return Math.pow(10, digits)
+    return parts.join("")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,24 +96,23 @@ export function InvoiceSeriesForm() {
       const invoiceDefaultsData = invoiceDefaults.data
 
       if (invoiceDefaultsData?.id) {
-        console.log(yearFormat);
         await editInvoiceDefaults.mutateAsync({
           id: invoiceDefaultsData.id,
           yearFormat: yearFormat,
           includeMonth: monthNumber === "yes",
           sequencePosition: sequentialPosition,
-          digits: toDigits(annualCount),
+          digits: annualCountToDigits(annualCount),
           prefix: prefix,
           currentNumber: invoiceDefaultsData.currentNumber ?? 0,
         })
       }
 
-      alert("Nastavení uloženo!")
+      toast.success("Nastavení číslování uloženo.")
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Neznámá chyba"
       console.error("Error saving invoice defaults:", errorMessage)
-      alert("Chyba při ukládání nastavení!")
+      toast.error("Chyba při ukládání nastavení!")
     } finally {
       setIsLoading(false)
     }
@@ -153,7 +151,7 @@ export function InvoiceSeriesForm() {
         <div className="text-2xl font-semibold">
           <span className="text-muted-foreground">Faktura </span>
           <span className="text-primary">
-            {generatePreview().replace("Faktura ", "")}
+            {generatePreview()}
           </span>
         </div>
       </div>
@@ -161,13 +159,13 @@ export function InvoiceSeriesForm() {
       <div className="space-y-3">
         <Label className="text-base font-medium">Formát čísla roku</Label>
         <div className="flex flex-wrap gap-2">
-          <OptionButton active={yearFormat === "yyyy"} onClick={() => setYearFormat("yyyy")}>
+          <OptionButton active={yearFormat === "YYYY"} onClick={() => setYearFormat("YYYY")}>
             {new Date().getFullYear()}
           </OptionButton>
-          <OptionButton active={yearFormat === "yy"} onClick={() => setYearFormat("yy")}>
+          <OptionButton active={yearFormat === "YY"} onClick={() => setYearFormat("YY")}>
             {new Date().getFullYear().toString().slice(-2)}
           </OptionButton>
-          <OptionButton active={yearFormat === "none"} onClick={() => setYearFormat("none")}>
+          <OptionButton active={yearFormat === "NONE"} onClick={() => setYearFormat("NONE")}>
             Nechci
           </OptionButton>
         </div>
@@ -189,14 +187,14 @@ export function InvoiceSeriesForm() {
         <Label className="text-base font-medium">Pořadové číslo</Label>
         <div className="flex gap-2">
           <OptionButton
-            active={sequentialPosition === "start"}
-            onClick={() => setSequentialPosition("start")}
+            active={sequentialPosition === "START"}
+            onClick={() => setSequentialPosition("START")}
           >
             Na začátku
           </OptionButton>
           <OptionButton
-            active={sequentialPosition === "end"}
-            onClick={() => setSequentialPosition("end")}
+            active={sequentialPosition === "END"}
+            onClick={() => setSequentialPosition("END")}
           >
             Na konci
           </OptionButton>

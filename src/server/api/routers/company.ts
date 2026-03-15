@@ -2,12 +2,12 @@ import { z } from "zod";
 
 import {
   createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
+  adminProcedure,
+  accountantProcedure,
 } from "~/server/api/trpc";
 
 export const companyRouter = createTRPCRouter({
-    get : publicProcedure
+    get : adminProcedure
     .query(async ({ ctx }) => {
       return ctx.db.company.findFirst({
         select: {
@@ -18,6 +18,7 @@ export const companyRouter = createTRPCRouter({
             address: true,
             bankAccount: true,
             bankCode: true,
+            iban: true,
             isPayer: true,
             mesto: true,
             psc: true,
@@ -25,7 +26,7 @@ export const companyRouter = createTRPCRouter({
       });
     }),
 
-    update: publicProcedure
+    update: adminProcedure
     .input(z.object({
         name: z.string(),
         address: z.string(),
@@ -35,6 +36,7 @@ export const companyRouter = createTRPCRouter({
         dic: z.string(),
         bankAccount: z.string(),
         bankCode: z.string(),
+        iban: z.string().optional().nullable(),
         isPayer: z.boolean(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -43,7 +45,6 @@ export const companyRouter = createTRPCRouter({
             return ctx.db.company.update({
                 where: { id: existingCompany.id },
                 data: {
-
                     name: input.name,
                     address: input.address,
                     mesto: input.mesto,
@@ -52,13 +53,29 @@ export const companyRouter = createTRPCRouter({
                     dic: input.dic,
                     bankAccount: input.bankAccount,
                     bankCode: input.bankCode,
+                    iban: input.iban,
+                    isPayer: input.isPayer,
+                },
+            });
+        } else {
+            return ctx.db.company.create({
+                data: {
+                    name: input.name,
+                    address: input.address,
+                    mesto: input.mesto,
+                    psc: input.psc,
+                    ico: input.ico,
+                    dic: input.dic,
+                    bankAccount: input.bankAccount,
+                    bankCode: input.bankCode,
+                    iban: input.iban,
                     isPayer: input.isPayer,
                 },
             });
         }
     }),
 
-    getseries : publicProcedure
+    getseries : accountantProcedure
     .query(async ({ ctx }) => {
       return ctx.db.invoiceNumbering.findFirst({
         select: {
@@ -73,7 +90,7 @@ export const companyRouter = createTRPCRouter({
       });
     }),
 
-    editSeries : publicProcedure
+    editSeries : accountantProcedure
     .input(z.object({ id: z.number().min(1),
         yearFormat: z.string().min(1),
         includeMonth: z.boolean(),

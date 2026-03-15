@@ -1,0 +1,19 @@
+.pdf-root {
+  color: #000;
+  background: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.pdf-root * {
+  color: #000 !important;
+  background: transparent !important;
+  border-color: #ccc !important;
+}
+
+.pdf-root .highlight {
+  background: #f5f5f5 !important;
+}
+
+.pdf-root .accent {
+  color: #1d4ed8 !important; /* blue-700 */
+}

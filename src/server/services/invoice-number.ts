@@ -1,5 +1,5 @@
 export type InvoiceNumberingConfig = {
-  yearFormat: "yyyy" | "yy" | "none"
+  yearFormat: "YYYY" | "YY" | "NONE"
   includeMonth: boolean
   sequencePosition: "START" | "END"
   digits: number
@@ -19,18 +19,17 @@ export function normalizeInvoiceNumbering(db: {
   digits: number
   prefix?: string | null
 }): InvoiceNumberingConfig {
+  const yf = db.yearFormat.toUpperCase()
   return {
     yearFormat:
-      db.yearFormat === "2025"
-        ? "yyyy"
-        : db.yearFormat === "25"
-        ? "yy"
-        : "none",
+      yf === "YYYY" ? "YYYY"
+      : yf === "YY" ? "YY"
+      : "NONE",
 
     includeMonth: db.includeMonth === true || db.includeMonth === 1,
 
     sequencePosition:
-      db.sequencePosition === "start" ? "START" : "END",
+      db.sequencePosition.toUpperCase() === "START" ? "START" : "END",
 
     digits: Number(db.digits),
 
@@ -59,11 +58,11 @@ export function buildInvoiceNumber(
     parts.push(paddedSequence)
   }
 
-  if (config.yearFormat === "yyyy") {
+  if (config.yearFormat === "YYYY") {
     parts.push(date.getFullYear().toString())
   }
 
-  if (config.yearFormat === "yy") {
+  if (config.yearFormat === "YY") {
     parts.push(date.getFullYear().toString().slice(-2))
   }
 

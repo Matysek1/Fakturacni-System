@@ -7,16 +7,12 @@ import { Input } from "../../components/ui/input"
 import { Label } from "../../components/ui/label"
 import { Textarea } from "../../components/ui/textarea"
 import { Switch } from "../../components/ui/switch"
-import { Loader2, Check } from "lucide-react"
 import Navbar from "~/app/componenty/navbar"
 import { api } from "~/trpc/react";
 import { useEffect } from "react";
+import { useSession } from "next-auth/react"
+import { toast } from "sonner"
 
-
-interface CompanySettingsFormProps {
-  onSave: () => void
-  isSaved: boolean
-}
 
 interface CompanyData {
   companyName: string
@@ -27,10 +23,12 @@ interface CompanyData {
   dic: string
   bankAccount: string
   bankCode: string
+  iban: string
   isVatPayer: boolean
 }
 
-export default function CompanySettingsForm({ onSave, isSaved }: CompanySettingsFormProps) {
+export default function CompanySettingsForm() {
+  const { data: session } = useSession()
   const [isLoading, setIsLoading] = useState(false)
 
   const [formData, setFormData] = useState<CompanyData>({
@@ -42,6 +40,7 @@ export default function CompanySettingsForm({ onSave, isSaved }: CompanySettings
     dic: "",
     bankAccount: "",
     bankCode: "",
+    iban: "",
     isVatPayer: true,
   })
   const fetchData =  api.company.get.useQuery();
@@ -72,8 +71,10 @@ export default function CompanySettingsForm({ onSave, isSaved }: CompanySettings
         dic: formData.dic,
         bankAccount: formData.bankAccount,
         bankCode: formData.bankCode,
+        iban: formData.iban,
         isPayer: formData.isVatPayer,
     });
+    toast.success("Firemní údaje byly uloženy.")
     setIsLoading(false)
   }
 
@@ -88,6 +89,7 @@ export default function CompanySettingsForm({ onSave, isSaved }: CompanySettings
             dic?: unknown
             bankAccount?: unknown
             bankCode?: unknown
+            iban?: unknown
             isPayer?: unknown
           }
   
@@ -100,6 +102,7 @@ export default function CompanySettingsForm({ onSave, isSaved }: CompanySettings
             dic: typeof u.dic === "string" ? u.dic : "",
             bankAccount: typeof u.bankAccount === "string" ? u.bankAccount : "",
             bankCode: typeof u.bankCode === "string" ? u.bankCode : "",
+            iban: typeof u.iban === "string" ? u.iban : "",
             isVatPayer: typeof u.isPayer === "boolean" ? u.isPayer : true,
           });
       }
@@ -107,6 +110,17 @@ export default function CompanySettingsForm({ onSave, isSaved }: CompanySettings
   useEffect(() => {
       fetchDataFunction();
   }, [fetchData.data]);
+
+  if (session?.user.role !== 1) {
+    return (
+      <div className="min-h-screen bg-blue-50/50">
+        <Navbar />
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <p className="text-xl font-semibold">Nemáte oprávnění k přístupu na tuto stránku.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full min-h-screen bg-blue-50/50">
@@ -236,25 +250,24 @@ export default function CompanySettingsForm({ onSave, isSaved }: CompanySettings
                 />
               </div>
             </div>
+            
+            <div className="space-y-2 mt-4">
+              <Label htmlFor="iban">IBAN</Label>
+              <Input
+                id="iban"
+                name="iban"
+                placeholder="CZ0000000000000000000000"
+                value={formData.iban}
+                onChange={handleChange}
+                disabled={isLoading}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3 pt-4 border-t">
             <Button type="submit" disabled={isLoading} className="gap-2">
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Ukládám...
-                </>
-              ) : isSaved ? (
-                <>
-                  <Check className="h-4 w-4" />
-                  Uloženo
-                </>
-              ) : (
-                "Uložit změny"
-              )}
+              Uložit změny
             </Button>
-            {isSaved && <p className="text-sm text-muted-foreground">Vaše nastavení bylo úspěšně uloženo.</p>}
           </div>
         </form>
       </div>
